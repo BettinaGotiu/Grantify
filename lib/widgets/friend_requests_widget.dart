@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/friends_service.dart';
+import '../core/app_style.dart';
 
 class FriendRequestsWidget extends StatelessWidget {
   const FriendRequestsWidget({super.key});
@@ -12,14 +13,32 @@ class FriendRequestsWidget extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Friend Requests'),
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.black, width: 2),
+          ),
+          title: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: AppStyle.cartoonDecoration(
+              color: AppStyle.primaryYellow,
+              borderRadius: 6,
+              shadowOffset: const Offset(2, 2),
+            ),
+            child: const Text(
+              'Cereri de Prietenie',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
           ),
           content: requestIds.isEmpty
               ? const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text("You have no new friend requests."),
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    "Nu ai cereri noi de prietenie.",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
                 )
               : SizedBox(
                   width: double.maxFinite,
@@ -29,7 +48,6 @@ class FriendRequestsWidget extends StatelessWidget {
                     itemBuilder: (context, index) {
                       String senderId = requestIds[index];
 
-                      // Extragem documentul cu informatiile utilizatorului din Firestore
                       return FutureBuilder<DocumentSnapshot>(
                         future: FirebaseFirestore.instance
                             .collection('users')
@@ -37,72 +55,75 @@ class FriendRequestsWidget extends StatelessWidget {
                             .get(),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
-                            return const ListTile(title: Text("Loading..."));
+                            return const ListTile(title: Text("Încărcare..."));
                           }
 
                           var data =
                               snapshot.data!.data() as Map<String, dynamic>?;
 
-                          // Extragem valorile cu fallback-uri in caz ca nu exista
-                          String username = data?['username'] ?? 'Unknown User';
-                          String email = data?['email'] ?? 'No email';
-                          String? photoUrl =
-                              data?['profilePhoto'] ?? data?['photoUrl'];
+                          String username = data?['username'] ?? 'Utilizator Necunoscut';
+                          String email = data?['email'] ?? 'Fără email';
+                          String photoUrl = data?['profilePic'] ?? 'assets/profile_pics/pic1.png';
 
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.blueAccent,
-                              backgroundImage:
-                                  photoUrl != null && photoUrl.isNotEmpty
-                                  ? NetworkImage(photoUrl)
-                                  : null,
-                              child: photoUrl == null || photoUrl.isEmpty
-                                  ? const Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                    )
-                                  : null,
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: AppStyle.cartoonDecoration(
+                              color: Colors.grey[50]!,
+                              borderRadius: 8,
+                              shadowOffset: const Offset(1, 1),
                             ),
-                            title: Text(
-                              username,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                            child: ListTile(
+                              leading: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.black, width: 1),
+                                ),
+                                child: CircleAvatar(
+                                  backgroundImage: AssetImage(photoUrl),
+                                  backgroundColor: Colors.grey[300],
+                                ),
                               ),
-                            ),
-                            subtitle: Text(
-                              email,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Decline Button
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () async {
-                                    await friendsService.declineFriendRequest(
-                                      senderId,
-                                    );
-                                    if (context.mounted) Navigator.pop(context);
-                                  },
+                              title: Text(
+                                username,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
                                 ),
-                                // Accept Button
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.check,
-                                    color: Colors.green,
+                              ),
+                              subtitle: Text(
+                                email,
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Decline Button
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: AppStyle.accentRed,
+                                    ),
+                                    onPressed: () async {
+                                      await friendsService.declineFriendRequest(
+                                        senderId,
+                                      );
+                                      if (context.mounted) Navigator.pop(context);
+                                    },
                                   ),
-                                  onPressed: () async {
-                                    await friendsService.acceptFriendRequest(
-                                      senderId,
-                                    );
-                                    if (context.mounted) Navigator.pop(context);
-                                  },
-                                ),
-                              ],
+                                  // Accept Button
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.check,
+                                      color: AppStyle.accentGreen,
+                                    ),
+                                    onPressed: () async {
+                                      await friendsService.acceptFriendRequest(
+                                        senderId,
+                                      );
+                                      if (context.mounted) Navigator.pop(context);
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -113,7 +134,7 @@ class FriendRequestsWidget extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: const Text('Închide', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900)),
             ),
           ],
         );
@@ -133,7 +154,7 @@ class FriendRequestsWidget extends StatelessWidget {
       builder: (context, snapshot) {
         if (!snapshot.hasData || !snapshot.data!.exists) {
           return IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            icon: const Icon(Icons.notifications_none, color: Colors.black),
             onPressed: () => _showRequestsDialog(context, []),
           );
         }
@@ -149,26 +170,26 @@ class FriendRequestsWidget extends StatelessWidget {
                 requests.isNotEmpty
                     ? Icons.notifications_active
                     : Icons.notifications_none,
-                color: Colors.white,
-                size: 28,
+                color: requests.isNotEmpty ? AppStyle.accentRed : Colors.black,
+                size: 26,
               ),
               onPressed: () => _showRequestsDialog(context, requests),
             ),
             if (requests.isNotEmpty)
               Positioned(
-                right: 8,
-                top: 8,
+                right: 4,
+                top: 4,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
-                    color: Colors.red,
+                    color: AppStyle.accentRed,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
                     '${requests.length}',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

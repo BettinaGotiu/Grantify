@@ -7,7 +7,8 @@ import '../models/friend.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/neon_card.dart';
-import '../widgets/friend_requests_widget.dart'; // NOU: am importat widget-ul
+import '../widgets/friend_requests_widget.dart';
+import '../core/app_style.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -23,7 +24,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
 
-  // Stream care citește array-ul 'friends' din documentul tău din 'users'
+  // Stream which reads friends from the users collection
   Stream<List<Friend>> _friendsStream() {
     return FirebaseFirestore.instance
         .collection('users')
@@ -33,14 +34,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
           if (!doc.exists) return [];
 
           final data = doc.data() as Map<String, dynamic>;
-
-          // Extragem lista de ID-uri de prieteni
           final List<dynamic> friendIds = data['friends'] ?? [];
           if (friendIds.isEmpty) return [];
 
           List<Friend> friendsList = [];
 
-          // Facem fetch la documentul FIECĂRUI prieten pentru a-i lua datele (nume, poza)
           for (String id in friendIds) {
             final fDoc = await FirebaseFirestore.instance
                 .collection('users')
@@ -57,7 +55,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                       'Unknown Player',
                   'email': fData['email'] ?? '',
                   'profilePic':
-                      fData['profilePic'] ?? 'assets/profile_pics/avatar1.png',
+                      fData['profilePic'] ?? 'assets/profile_pics/pic1.png',
                 }),
               );
             }
@@ -66,7 +64,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
         });
   }
 
-  // Caută utilizatori noi în baza de date
   Future<void> _searchUsers() async {
     final q = _searchCtrl.text.trim();
     if (q.isEmpty) {
@@ -77,7 +74,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
     setState(() => _searching = true);
 
     try {
-      // Căutăm direct în colecția principală 'users'
       final byEmail = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: q)
@@ -106,7 +102,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 dData['username'] ?? dData['email']?.split('@')[0] ?? 'Unknown',
             'email': dData['email'] ?? '',
             'profilePic':
-                dData['profilePic'] ?? 'assets/profile_pics/avatar1.png',
+                dData['profilePic'] ?? 'assets/profile_pics/pic1.png',
           }),
         );
       }
@@ -121,14 +117,12 @@ class _FriendsScreenState extends State<FriendsScreen> {
     }
   }
 
-  // Trimite cererea de prietenie folosind FriendsService-ul existent
   Future<void> _sendRequest(Friend target) async {
     final friendsService = FriendsService();
     await friendsService.sendFriendRequest(target.uid);
 
     if (!mounted) return;
 
-    // Stergem manual utilizatorul din lista de căutare pt feedback vizual bun
     setState(() {
       _results.removeWhere((f) => f.uid == target.uid);
     });
@@ -148,173 +142,222 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 620),
-            child: Column(
-              children: [
-                // Header cu Titlu + Clopoțelul de notificări pentru cereri
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Prieteni',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const FriendRequestsWidget(), // Widget-ul pentru acceptat cereri
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Zona de căutare
-                NeonCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Caută Prieteni Noi',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      AppTextField(
-                        controller: _searchCtrl,
-                        label: 'Introdu email sau username exact',
-                        prefixIcon: Icons.search,
-                      ),
-                      const SizedBox(height: 12),
-                      AppButton(
-                        label: 'Caută',
-                        onPressed: _searchUsers,
-                        loading: _searching,
-                        icon: Icons.person_search,
-                      ),
-                      if (_results.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        const Divider(),
-                        ..._results.map(
-                          (f) => ListTile(
-                            leading: CircleAvatar(
-                              backgroundImage: AssetImage(f.profilePic),
-                              onBackgroundImageError: (exception, stackTrace) {},
-                              backgroundColor: Colors.grey[800],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('PRIETENI'),
+        centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: FriendRequestsWidget(),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 620),
+              child: Column(
+                children: [
+                  // Căutare Prieteni
+                  NeonCard(
+                    color: Colors.white,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.person_search, color: Colors.black),
+                            SizedBox(width: 8),
+                            Text(
+                              'Caută Prieteni Noi',
+                              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
                             ),
-                            title: Text(
-                              f.username,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              f.email,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(
-                                Icons.person_add_alt_1,
-                                color: Colors.deepPurpleAccent,
-                              ),
-                              onPressed: () => _sendRequest(f),
-                            ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Lista de Prieteni Curenți
-                NeonCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Prietenii Tăi',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      StreamBuilder<List<Friend>>(
-                        stream: _friendsStream(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _searchCtrl,
+                          label: 'Introdu email sau username exact',
+                          prefixIcon: Icons.search,
+                        ),
+                        const SizedBox(height: 16),
+                        AppButton(
+                          label: 'Caută',
+                          onPressed: _searchUsers,
+                          loading: _searching,
+                          backgroundColor: AppStyle.primaryYellow,
+                          textColor: Colors.black,
+                          icon: Icons.person_search,
+                        ),
+                        if (_results.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Divider(color: Colors.black, thickness: 1.5),
+                          ..._results.map(
+                            (f) => Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              decoration: AppStyle.cartoonDecoration(
+                                color: Colors.grey[50]!,
+                                borderRadius: 8,
+                                shadowOffset: const Offset(2, 2),
                               ),
-                            );
-                          }
-
-                          if (snapshot.hasError) {
-                            return const Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Text('Eroare la încărcarea prietenilor.'),
-                            );
-                          }
-
-                          final friends = snapshot.data ?? [];
-
-                          if (friends.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text(
-                                'Nu ai adăugat niciun prieten încă.',
-                                textAlign: TextAlign.center,
-                              ),
-                            );
-                          }
-
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: friends.length,
-                            itemBuilder: (_, i) {
-                              final f = friends[i];
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundImage: AssetImage(f.profilePic),
-                                  onBackgroundImageError: (exception, stackTrace) {},
-                                  backgroundColor: Colors.grey[800],
+                              child: ListTile(
+                                leading: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.black, width: 1.5),
+                                  ),
+                                  child: CircleAvatar(
+                                    backgroundImage: AssetImage(f.profilePic),
+                                    onBackgroundImageError: (exception, stackTrace) {},
+                                    backgroundColor: Colors.grey[300],
+                                  ),
                                 ),
                                 title: Text(
                                   f.username,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black,
                                   ),
                                 ),
-                                subtitle: Text(f.email),
+                                subtitle: Text(
+                                  f.email,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                                ),
                                 trailing: IconButton(
                                   icon: const Icon(
-                                    Icons.message,
-                                    color: Colors.white54,
+                                    Icons.person_add_alt_1,
+                                    color: AppStyle.accentPurple,
+                                    size: 26,
                                   ),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Chat-ul cu ${f.username} va fi disponibil curând!',
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                  onPressed: () => _sendRequest(f),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Lista Prieteni Curenți
+                  NeonCard(
+                    color: Colors.white,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.people, color: Colors.black),
+                            SizedBox(width: 8),
+                            Text(
+                              'Prietenii Tăi',
+                              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        StreamBuilder<List<Friend>>(
+                          stream: _friendsStream(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: CircularProgressIndicator(),
                                 ),
                               );
-                            },
-                          );
-                        },
-                      ),
-                    ],
+                            }
+
+                            if (snapshot.hasError) {
+                              return const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                  'Eroare la încărcarea prietenilor.',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: AppStyle.accentRed),
+                                ),
+                              );
+                            }
+
+                            final friends = snapshot.data ?? [];
+
+                            if (friends.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 24),
+                                child: Text(
+                                  'Nu ai adăugat niciun prieten încă.',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                                  textAlign: TextAlign.center,
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: friends.length,
+                              itemBuilder: (_, i) {
+                                final f = friends[i];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: AppStyle.cartoonDecoration(
+                                    color: Colors.white,
+                                    borderRadius: 10,
+                                    shadowOffset: const Offset(2, 2),
+                                  ),
+                                  child: ListTile(
+                                    leading: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.black, width: 1.5),
+                                      ),
+                                      child: CircleAvatar(
+                                        backgroundImage: AssetImage(f.profilePic),
+                                        onBackgroundImageError: (exception, stackTrace) {},
+                                        backgroundColor: Colors.grey[300],
+                                      ),
+                                    ),
+                                    title: Text(
+                                      f.username,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      f.email,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                                    ),
+                                    trailing: IconButton(
+                                      icon: const Icon(
+                                        Icons.message,
+                                        color: AppStyle.accentPurple,
+                                      ),
+                                      onPressed: () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Chat-ul cu ${f.username} va fi disponibil curând!',
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

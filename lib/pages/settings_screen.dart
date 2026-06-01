@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
+import '../services/database_service.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/neon_card.dart';
+import '../core/app_style.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,13 +20,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
 
-  String _currentProfilePic = 'assets/profile_pics/avatar1.png';
+  String _currentProfilePic = 'assets/profile_pics/pic1.png';
 
   final List<String> _profilePics = [
     'assets/profile_pics/pic1.png',
     'assets/profile_pics/pic2.png',
     'assets/profile_pics/pic3.png',
     'assets/profile_pics/pic4.png',
+    'assets/profile_pics/pic5.png',
+    'assets/profile_pics/pic6.png',
   ];
 
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
@@ -43,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _emailCtrl.text = user.email ?? '';
     _usernameCtrl.text = user.displayName ?? '';
 
-    // Încărcăm datele din noua colecție principală 'users'
+    // Load from users collection
     final snap = await FirebaseFirestore.instance
         .collection('users')
         .doc(_uid)
@@ -84,7 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await user.updatePassword(password);
       }
 
-      // Update in Firestore
+      // Update in Firestore (both legacy collection and users1 collection)
       final payload = {
         'uid': user.uid,
         'username': username.isNotEmpty ? username : user.email?.split('@')[0],
@@ -93,7 +96,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // Actualizăm ambele colecții pentru consistență
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -104,12 +106,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           .doc(user.uid)
           .set(payload, SetOptions(merge: true));
 
+      // Sync to users1
+      await FirebaseFirestore.instance
+          .collection('users1')
+          .doc(user.uid)
+          .set({
+        'email': email,
+      }, SetOptions(merge: true));
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Contul și poza au fost actualizate!')),
       );
 
-      // Golim parola din câmp pentru siguranță
       _passwordCtrl.clear();
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -123,21 +132,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    try {
+      // Deactivate session on logout
+      await DatabaseService().deactivateSession(_uid);
+    } catch (e) {
+      debugPrint('Error deactivating session: $e');
+    }
+    await FirebaseAuth.instance.signOut();
+  }
+
   Future<void> _deleteAccount() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete account?'),
-        content: const Text('Această acțiune este permanentă.'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.black, width: 2),
+        ),
+        title: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: AppStyle.cartoonDecoration(
+            color: AppStyle.accentRed,
+            borderRadius: 6,
+            shadowOffset: const Offset(2, 2),
+          ),
+          child: const Text(
+            'Ștergere Cont?',
+            style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        content: const Text(
+          'Această acțiune este permanentă și vă va șterge toate datele din baza de date.',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Anulează', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
           ),
-          FilledButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppStyle.accentRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: Colors.black, width: 2),
+              ),
+            ),
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Șterge definitiv'),
           ),
         ],
       ),
@@ -149,22 +195,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (user == null) return;
 
     try {
-      // Stergem utilizatorul din ambele colectii
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .delete();
-      await FirebaseFirestore.instance
-          .collection('user_index')
-          .doc(user.uid)
-          .delete();
+      // Clean up Firestore data
+      await DatabaseService().deleteSession(_uid);
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
+      await FirebaseFirestore.instance.collection('user_index').doc(user.uid).delete();
+      await FirebaseFirestore.instance.collection('users1').doc(user.uid).delete();
+      
+      // Delete user account
       await user.delete();
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            e.message ?? 'Delete failed, please re-login and retry.',
+            e.message ?? 'Ștergerea a eșuat, vă rugăm să vă reconectați și să reîncercați.',
           ),
         ),
       );
@@ -181,117 +225,130 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: NeonCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Setări Cont',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Zona pentru Poza de profil (Stilul Scan Pop-up)
-                  const Text(
-                    "Alege o poză de profil:",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 100,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _profilePics.length,
-                      itemBuilder: (context, index) {
-                        String pic = _profilePics[index];
-                        bool isSelected = pic == _currentProfilePic;
-
-                        return GestureDetector(
-                          onTap: () => setState(() => _currentProfilePic = pic),
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.deepPurpleAccent
-                                    : Colors.transparent,
-                                width: 3,
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                12,
-                              ), // Borderul la fel ca in ClipRRect
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.asset(
-                                pic,
-                                height: 90,
-                                width: 90,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(
-                                      Icons.image_not_supported,
-                                      size: 40,
-                                      color: Colors.grey,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('SETĂRI CONT'),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: NeonCard(
+                color: Colors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      "Alege o poză de profil:",
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
                     ),
-                  ),
-                  const Divider(height: 30),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _profilePics.length,
+                        itemBuilder: (context, index) {
+                          String pic = _profilePics[index];
+                          bool isSelected = pic == _currentProfilePic;
 
-                  // Campurile Originale
-                  AppTextField(
-                    controller: _usernameCtrl,
-                    label: 'Nume Utilizator',
-                    prefixIcon: Icons.person_outline,
-                  ),
-                  const SizedBox(height: 12),
-                  AppTextField(
-                    controller: _emailCtrl,
-                    label: 'Email',
-                    keyboardType: TextInputType.emailAddress,
-                    prefixIcon: Icons.alternate_email,
-                  ),
-                  const SizedBox(height: 12),
-                  AppTextField(
-                    controller: _passwordCtrl,
-                    label: 'Parolă nouă (opțional)',
-                    obscureText: true,
-                    prefixIcon: Icons.password_outlined,
-                  ),
-                  const SizedBox(height: 24),
+                          return GestureDetector(
+                            onTap: () => setState(() => _currentProfilePic = pic),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 100),
+                              margin: const EdgeInsets.only(right: 12, bottom: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppStyle.accentPurple
+                                      : Colors.black,
+                                  width: isSelected ? 3 : 2,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: isSelected
+                                    ? const [
+                                        BoxShadow(
+                                          color: Colors.black,
+                                          offset: Offset(2, 2),
+                                          blurRadius: 0,
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(9),
+                                child: Image.asset(
+                                  pic,
+                                  height: 80,
+                                  width: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(
+                                        Icons.image_not_supported,
+                                        size: 40,
+                                        color: Colors.grey,
+                                      ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(color: Colors.black, thickness: 1.5, height: 24),
+                    
+                    AppTextField(
+                      controller: _usernameCtrl,
+                      label: 'Nume Utilizator',
+                      prefixIcon: Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      controller: _emailCtrl,
+                      label: 'Email',
+                      keyboardType: TextInputType.emailAddress,
+                      prefixIcon: Icons.alternate_email,
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      controller: _passwordCtrl,
+                      label: 'Parolă nouă (opțional)',
+                      obscureText: true,
+                      prefixIcon: Icons.password_outlined,
+                    ),
+                    const SizedBox(height: 24),
 
-                  // Butoanele Originale
-                  AppButton(
-                    label: 'Salvează modificările',
-                    onPressed: _save,
-                    loading: _loading,
-                    icon: Icons.save_outlined,
-                  ),
-                  const SizedBox(height: 12),
-                  AppButton(
-                    label: 'Deconectare',
-                    onPressed: FirebaseAuth.instance.signOut,
-                    icon: Icons.logout,
-                  ),
-                  const SizedBox(height: 12),
-                  AppButton(
-                    label: 'Șterge contul',
-                    onPressed: _deleteAccount,
-                    icon: Icons.delete_outline,
-                  ),
-                ],
+                    AppButton(
+                      label: 'Salvează modificările',
+                      onPressed: _save,
+                      loading: _loading,
+                      backgroundColor: AppStyle.primaryYellow,
+                      textColor: Colors.black,
+                      icon: Icons.save_outlined,
+                    ),
+                    const SizedBox(height: 12),
+                    AppButton(
+                      label: 'Deconectare',
+                      onPressed: _logout,
+                      backgroundColor: Colors.white,
+                      textColor: Colors.black,
+                      icon: Icons.logout,
+                    ),
+                    const SizedBox(height: 12),
+                    AppButton(
+                      label: 'Șterge contul',
+                      onPressed: _deleteAccount,
+                      backgroundColor: AppStyle.accentRed,
+                      textColor: Colors.white,
+                      icon: Icons.delete_outline,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

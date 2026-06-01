@@ -1,39 +1,25 @@
 import 'package:flutter/material.dart';
+import '../core/app_style.dart';
 
 class NeonCard extends StatelessWidget {
   const NeonCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
+    this.color = Colors.white,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Container(
       padding: padding,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.65)),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: 0.22),
-            blurRadius: 20,
-            spreadRadius: 1,
-          ),
-        ],
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            scheme.surface.withValues(alpha: 0.95),
-            scheme.surfaceContainerHigh.withValues(alpha: 0.9),
-          ],
-        ),
+      decoration: AppStyle.cartoonDecoration(
+        color: color,
+        borderRadius: 12.0,
       ),
       child: child,
     );

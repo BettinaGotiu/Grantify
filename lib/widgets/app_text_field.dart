@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/app_style.dart';
 
 class AppTextField extends StatelessWidget {
   const AppTextField({
@@ -25,10 +26,15 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
-      decoration: InputDecoration(
+      style: const TextStyle(
+        color: Colors.black,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: AppStyle.cartoonInputDecoration(
         labelText: label,
-        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: prefixIcon == null
+            ? null
+            : Icon(prefixIcon, color: Colors.black54),
       ),
     );
   }
