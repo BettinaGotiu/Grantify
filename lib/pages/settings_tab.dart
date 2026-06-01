@@ -33,13 +33,11 @@ class _SettingsTabState extends State<SettingsTab> {
     'assets/profile_pics/pic6.png',
   ];
 
-  final List<String> _awsTopics = [
-    'AWS Cloud Practitioner',
-    'AWS Solutions Architect',
-    'AWS Developer',
-    'AWS SysOps',
-    'Tehnologii Web',
-    'Securitate Cibernetică',
+  // Fixed S3 topics – matches the S3 bucket structure
+  static const List<String> _fixedTopics = [
+    'digitalizare',
+    'productie',
+    'servicii',
   ];
 
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
@@ -141,6 +139,14 @@ class _SettingsTabState extends State<SettingsTab> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  /// Toggles the admin role in users1 for demonstration purposes
+  Future<void> _toggleAdminRole(bool currentVal) async {
+    await FirebaseFirestore.instance
+        .collection('users1')
+        .doc(_uid)
+        .set({'isAdmin': !currentVal}, SetOptions(merge: true));
   }
 
   Future<void> _logout() async {
@@ -254,7 +260,66 @@ class _SettingsTabState extends State<SettingsTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Admin conditional button
+                      // ── Profil Utilizator ──
+                      NeonCard(
+                        color: Colors.white,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: AppStyle.cartoonDecoration(
+                                        color: AppStyle.accentPurple,
+                                        borderRadius: 8,
+                                        shadowOffset: const Offset(1, 1),
+                                      ),
+                                      child: const Icon(Icons.person, color: Colors.white),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Profilul Meu',
+                                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                                        ),
+                                        Text(
+                                          FirebaseAuth.instance.currentUser?.email ?? 'Fără Email',
+                                          style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                // Admin Toggle Switch
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Admin:',
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                                    ),
+                                    Switch(
+                                      activeTrackColor: AppStyle.accentPurple,
+                                      value: isAdmin,
+                                      onChanged: (val) => _toggleAdminRole(isAdmin),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(color: Colors.black, thickness: 1.5),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Admin conditional button ──
                       if (isAdmin) ...[
                         GestureDetector(
                           onTap: () {
@@ -291,7 +356,7 @@ class _SettingsTabState extends State<SettingsTab> {
                         ),
                       ],
 
-                      // Management Profil card
+                      // ── Management Profil card ──
                       NeonCard(
                         color: Colors.white,
                         child: Column(
@@ -386,7 +451,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       ),
                       const SizedBox(height: 20),
 
-                      // AWS Topics and Web Development checklist card
+                      // ── Topice Interes S3 (digitalizare, productie, servicii) ──
                       NeonCard(
                         color: Colors.white,
                         child: Column(
@@ -394,63 +459,69 @@ class _SettingsTabState extends State<SettingsTab> {
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.cloud_done_outlined, color: Colors.black),
+                                Icon(Icons.topic_outlined, color: Colors.black),
                                 SizedBox(width: 8),
                                 Text(
-                                  'Topice AWS & Interese Core',
+                                  'Domenii de Interes',
                                   style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             const Text(
-                              'Abonați-vă la topicele de interes pentru a primi notificări personalizate.',
+                              'Selectează domeniile pentru a primi știri personalizate pe pagina de Acasă.',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
                             ),
                             const SizedBox(height: 12),
                             const Divider(color: Colors.black, thickness: 1.5),
                             const SizedBox(height: 8),
                             
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _awsTopics.map((topic) {
-                                final bool isSubscribed = subscribedTopics.contains(topic);
-                                return GestureDetector(
-                                  onTap: () => DatabaseService().toggleSubscribedTopic(_uid, topic),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 100),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    decoration: AppStyle.cartoonDecoration(
-                                      color: isSubscribed ? AppStyle.primaryYellow : Colors.white,
-                                      borderRadius: 8,
-                                      shadowOffset: isSubscribed ? const Offset(1, 1) : const Offset(3, 3),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          isSubscribed ? Icons.check_box : Icons.check_box_outline_blank,
-                                          size: 16,
-                                          color: Colors.black,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          topic,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
+                            ..._fixedTopics.map((topic) {
+                              final bool isSubscribed = subscribedTopics.contains(topic);
+                              // Capitalize the displayed name
+                              final String displayName = topic[0].toUpperCase() + topic.substring(1);
+
+                              return GestureDetector(
+                                onTap: () => DatabaseService().toggleSubscribedTopic(_uid, topic),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 100),
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  decoration: AppStyle.cartoonDecoration(
+                                    color: isSubscribed ? AppStyle.primaryYellow : Colors.white,
+                                    borderRadius: 10,
+                                    shadowOffset: isSubscribed ? const Offset(1, 1) : const Offset(3, 3),
                                   ),
-                                );
-                              }).toList(),
-                            ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isSubscribed ? Icons.check_box : Icons.check_box_outline_blank,
+                                        size: 22,
+                                        color: Colors.black,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          displayName,
+                                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                                        ),
+                                      ),
+                                      Icon(
+                                        _getTopicIcon(topic),
+                                        color: Colors.black54,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
                           ],
                         ),
                       ),
                       const SizedBox(height: 20),
 
-                      // Logout & Account Delete buttons card
+                      // ── Logout & Account Delete buttons card ──
                       NeonCard(
                         color: Colors.white,
                         child: Column(
@@ -483,5 +554,19 @@ class _SettingsTabState extends State<SettingsTab> {
         ),
       ),
     );
+  }
+
+  /// Returns an icon for each fixed topic domain
+  IconData _getTopicIcon(String topic) {
+    switch (topic) {
+      case 'digitalizare':
+        return Icons.computer;
+      case 'productie':
+        return Icons.factory;
+      case 'servicii':
+        return Icons.miscellaneous_services;
+      default:
+        return Icons.label;
+    }
   }
 }

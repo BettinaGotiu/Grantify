@@ -36,6 +36,9 @@ class _MatchingTabState extends State<MatchingTab> {
   // Selected Option titles for display
   String _domeniuName = 'IT / Tehnologie';
 
+  // Mock company name (from OpenAPI.ro simulation)
+  String _companyName = '';
+
   // Firestore results
   List<QueryDocumentSnapshot> _eligibleGrants = [];
   bool _searchingGrants = false;
@@ -67,7 +70,8 @@ class _MatchingTabState extends State<MatchingTab> {
     setState(() {
       _cuiVerifying = false;
       _cuiVerified = true;
-      // Mocked data retrieved
+      // Mocked data retrieved from OpenAPI.ro
+      _companyName = 'DANTE INTERNATIONAL S.A.';
       _userCaen = '6201'; // IT / Tehnologie
       _userLocatie = 'Urban';
       _userVechime = 2;
@@ -87,7 +91,7 @@ class _MatchingTabState extends State<MatchingTab> {
 
       // Deterministic filter algorithm
       List<QueryDocumentSnapshot> eligibile = allGrantsDocs.where((doc) {
-        Map<String, dynamic> criterii = doc.data() as Map<String, dynamic>;
+        Map<String, dynamic> criterii = doc.data();
         
         // Extract criteria safely
         Map<String, dynamic> criteriiHard = criterii['criterii_hard'] ?? {};
@@ -173,6 +177,7 @@ class _MatchingTabState extends State<MatchingTab> {
       _currentState = MatchingState.chooseProfile;
       _cuiCtrl.clear();
       _cuiVerified = false;
+      _companyName = '';
       _userCaen = '';
       _userLocatie = 'Urban';
       _userVechime = 0;
@@ -376,38 +381,86 @@ class _MatchingTabState extends State<MatchingTab> {
               icon: Icons.done_all,
             ),
             
-            // OpenAPI.ro mock confirmation box
+            // OpenAPI.ro mock confirmation box – Company Info Card
             if (_cuiVerified) ...[
               const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: AppStyle.cartoonDecoration(
-                  color: Colors.grey[50]!,
-                  borderRadius: 8,
-                  shadowOffset: const Offset(2, 2),
+                  color: Colors.white,
+                  borderRadius: 12,
+                  shadowOffset: const Offset(3, 3),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.check_circle, color: AppStyle.accentGreen, size: 20),
-                        SizedBox(width: 6),
-                        Text(
-                          'DATE EXTRASE (OpenAPI.ro)',
-                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppStyle.accentGreen),
-                        ),
-                      ],
+                    // Success header
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: AppStyle.cartoonDecoration(
+                        color: AppStyle.accentGreen,
+                        borderRadius: 8,
+                        shadowOffset: const Offset(2, 2),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.verified, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'FIRMĂ VERIFICATĂ – OpenAPI.ro',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
+
+                    // Company Name – prominent display
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: AppStyle.cartoonDecoration(
+                        color: AppStyle.primaryYellow,
+                        borderRadius: 8,
+                        shadowOffset: const Offset(2, 2),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.business, color: Colors.black, size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'DENUMIRE FIRMĂ',
+                                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, color: Colors.black54),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _companyName,
+                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Colors.black),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     const Divider(color: Colors.black, thickness: 1.5),
-                    const SizedBox(height: 4),
-                    Text(
-                      '• CAEN: $_userCaen (Servicii IT / Dezvoltare Software)\n'
-                      '• Locație: $_userLocatie\n'
-                      '• Vechime înregistrată: $_userVechime ani',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, height: 1.5),
-                    ),
+                    const SizedBox(height: 10),
+
+                    // Extracted data rows
+                    _buildDataRow(Icons.code, 'COD CAEN', '$_userCaen (Dezvoltare Software)'),
+                    const SizedBox(height: 8),
+                    _buildDataRow(Icons.location_city, 'LOCAȚIE', _userLocatie),
+                    const SizedBox(height: 8),
+                    _buildDataRow(Icons.calendar_today, 'VECHIME', '$_userVechime ani'),
                   ],
                 ),
               ),
@@ -590,7 +643,7 @@ class _MatchingTabState extends State<MatchingTab> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(color: AppStyle.accentPurple),
-            const SizedBox(height: 16),
+             SizedBox(height: 16),
             Text(
               'Filtrare criterii hard în baza de date...',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -729,6 +782,26 @@ class _MatchingTabState extends State<MatchingTab> {
           backgroundColor: Colors.white,
           textColor: Colors.black,
           icon: Icons.chevron_left,
+        ),
+      ],
+    );
+  }
+
+  /// Helper widget: displays a single data row with icon + label + value
+  Widget _buildDataRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.black54),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.black54),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.black),
+          ),
         ),
       ],
     );

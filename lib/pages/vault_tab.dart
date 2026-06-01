@@ -234,10 +234,30 @@ class _VaultTabState extends State<VaultTab> {
                       ),
                       const SizedBox(height: 8),
 
-                      // Profile variables
-                      Text(
-                        'Profil utilizat: CAEN $caen | Locație $location | Vechime $vechime ani',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                      // Profile context banner – shows the search criteria at save time
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.black, width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_search, size: 18, color: Colors.black54),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Profil Salvat: CAEN $caen | Mediu $location | Vechime $vechime ani',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Divider(color: Colors.black, thickness: 1.5, height: 16),

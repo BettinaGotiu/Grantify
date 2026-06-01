@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_style.dart';
-import 'home_screen.dart';
+import 'home_news_tab.dart';
 import 'friends_screen.dart';
 import 'matching_tab.dart';
 import 'vault_tab.dart';
@@ -19,7 +19,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const HomeScreen(),
+      const HomeNewsTab(),
       const MatchingTab(),
       const VaultTab(),
       const FriendsScreen(),
