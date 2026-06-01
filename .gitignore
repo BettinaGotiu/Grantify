@@ -1,79 +1,165 @@
-# Miscellaneous
+# =========================
+# MISCELLANEOUS
+# =========================
+
 *.class
 *.lock
 *.log
 *.pyc
 *.swp
+
 .buildlog/
-.history
+.history/
 
+.DS_Store
+Thumbs.db
 
+# =========================
+# FLUTTER REPO-SPECIFIC
+# =========================
 
-# Flutter repo-specific
 /bin/cache/
 /bin/internal/bootstrap.bat
 /bin/internal/bootstrap.sh
 /bin/mingit/
+
 /dev/benchmarks/mega_gallery/
 /dev/bots/.recipe_deps
 /dev/bots/android_tools/
 /dev/devicelab/ABresults*.json
+
 /dev/docs/doc/
 /dev/docs/flutter.docs.zip
 /dev/docs/lib/
 /dev/docs/pubspec.yaml
+
 /dev/integration_tests/**/xcuserdata
 /dev/integration_tests/**/Pods
+
 /packages/flutter/coverage/
+
 version
 analysis_benchmark.json
 
 # packages file containing multi-root paths
 .packages.generated
 
-# Flutter/Dart/Pub related
+# =========================
+# FLUTTER / DART / PUB
+# =========================
+
 **/doc/api/
+
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+
 **/generated_plugin_registrant.dart
+
 .packages
+
 .pub-preload-cache/
 .pub/
+
 build/
+coverage/
+
 flutter_*.png
+
 linked_*.ds
 unlinked.ds
 unlinked_spec.ds
 
-# Android related
+.metadata
+pubspec.lock
+
+# =========================
+# FIREBASE / ENV / SECRETS
+# =========================
+
+# Firebase Android
+android/app/google-services.json
+**/android/app/google-services.json
+
+# Firebase iOS
+ios/Runner/GoogleService-Info.plist
+**/ios/Runner/GoogleService-Info.plist
+
+# Firebase macOS
+macos/Runner/GoogleService-Info.plist
+**/macos/Runner/GoogleService-Info.plist
+
+# FlutterFire CLI
+firebase.json
+.firebaserc
+
+# Firebase generated options
+lib/firebase_options.dart
+
+# Web Firebase config
+web/firebase-config.js
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Secrets
+secrets.json
+config/secrets.dart
+
+# =========================
+# ANDROID
+# =========================
+
 **/android/**/gradle-wrapper.jar
+
 .gradle/
+
 **/android/captures/
+
 **/android/gradlew
 **/android/gradlew.bat
-**/android/local.properties
-**/android/**/GeneratedPluginRegistrant.java
-**/android/key.properties
-*.jks
 
-# iOS/XCode related
+**/android/local.properties
+
+**/android/**/GeneratedPluginRegistrant.java
+
+**/android/key.properties
+
+*.jks
+*.keystore
+
+# =========================
+# IOS / XCODE
+# =========================
+
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
 **/ios/**/*.moved-aside
 **/ios/**/*.pbxuser
 **/ios/**/*.perspectivev3
+
 **/ios/**/*sync/
+
 **/ios/**/.sconsign.dblite
 **/ios/**/.tags*
+
 **/ios/**/.vagrant/
+
 **/ios/**/DerivedData/
+
 **/ios/**/Icon?
+
 **/ios/**/Pods/
 **/ios/**/.symlinks/
+
 **/ios/**/profile
+
 **/ios/**/xcuserdata
+
 **/ios/.generated/
+
 **/ios/Flutter/.last_build_id
 **/ios/Flutter/App.framework
 **/ios/Flutter/Flutter.framework
@@ -84,36 +170,63 @@ unlinked_spec.ds
 **/ios/Flutter/app.zip
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
+
 **/ios/ServiceDefinitions.json
+
 **/ios/Runner/GeneratedPluginRegistrant.*
 
-# macOS
+# =========================
+# MACOS
+# =========================
+
 **/Flutter/ephemeral/
+
 **/Pods/
+
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/macos/Flutter/ephemeral
+
 **/xcuserdata/
 
-# Windows
+# =========================
+# WINDOWS
+# =========================
+
 **/windows/flutter/generated_plugin_registrant.cc
 **/windows/flutter/generated_plugin_registrant.h
 **/windows/flutter/generated_plugins.cmake
 
-# Linux
+# =========================
+# LINUX
+# =========================
+
 **/linux/flutter/generated_plugin_registrant.cc
 **/linux/flutter/generated_plugin_registrant.h
 **/linux/flutter/generated_plugins.cmake
 
-# Coverage
-coverage/
+# =========================
+# SYMBOLS
+# =========================
 
-# Symbols
 app.*.symbols
 
-# Exceptions to above rules.
+# =========================
+# FASTLANE
+# =========================
+
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# =========================
+# EXCEPTIONS
+# =========================
+
 !**/ios/**/default.mode1v3
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
+
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
