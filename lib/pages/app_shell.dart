@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../core/app_style.dart';
 import 'home_screen.dart';
 import 'friends_screen.dart';
-import 'settings_screen.dart';
+import 'matching_tab.dart';
+import 'vault_tab.dart';
+import 'settings_tab.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -18,8 +20,10 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final pages = [
       const HomeScreen(),
+      const MatchingTab(),
+      const VaultTab(),
       const FriendsScreen(),
-      const SettingsScreen(),
+      const SettingsTab(),
     ];
 
     return Scaffold(
@@ -39,9 +43,19 @@ class _AppShellState extends State<AppShell> {
           onDestinationSelected: (i) => setState(() => _index = i),
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined, color: Colors.black),
-              selectedIcon: Icon(Icons.home, color: Colors.black),
+              icon: Icon(Icons.newspaper_outlined, color: Colors.black),
+              selectedIcon: Icon(Icons.newspaper, color: Colors.black),
               label: 'Acasă',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.analytics_outlined, color: Colors.black),
+              selectedIcon: Icon(Icons.analytics, color: Colors.black),
+              label: 'Matching',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.folder_special_outlined, color: Colors.black),
+              selectedIcon: Icon(Icons.folder_special, color: Colors.black),
+              label: 'Vault',
             ),
             NavigationDestination(
               icon: Icon(Icons.people_outline, color: Colors.black),
