@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -7,12 +6,8 @@ import '../core/app_style.dart';
 import '../models/user1.dart';
 import '../models/grant1.dart';
 import '../services/database_service.dart';
+import '../services/news_service.dart';
 import '../widgets/neon_card.dart';
-
-/// ─── ÎNLOCUIEȘTE {api-id} cu ID-ul tău API Gateway real ───
-const String kApiGatewayId = '{api-id}';
-const String kNewsBaseUrl =
-    'https://$kApiGatewayId.execute-api.eu-central-1.amazonaws.com/news';
 
 class HomeNewsTab extends StatefulWidget {
   const HomeNewsTab({super.key});
@@ -23,34 +18,11 @@ class HomeNewsTab extends StatefulWidget {
 
 class _HomeNewsTabState extends State<HomeNewsTab> {
   final DatabaseService _db = DatabaseService();
+  final NewsService _newsService = NewsService();
   final String _uid = FirebaseAuth.instance.currentUser!.uid;
 
   bool _newsExpanded = false;
   bool _grantsExpanded = false;
-
-  /// Fetches news items from the AWS API Gateway endpoint.
-  /// Returns a list of maps with at least the key `file_url`.
-  Future<List<Map<String, dynamic>>> _fetchNews(List<String> topics) async {
-    if (topics.isEmpty) return [];
-
-    final topicsParam = topics.join(',');
-    final url = Uri.parse('$kNewsBaseUrl?topics=$topicsParam');
-
-    try {
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final List<dynamic> parsed = jsonDecode(response.body);
-        return parsed.cast<Map<String, dynamic>>();
-      } else {
-        debugPrint('News API error: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      debugPrint('News fetch error: $e');
-      return [];
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,7 +80,7 @@ class _HomeNewsTabState extends State<HomeNewsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header row
+          // Header row with refresh button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -122,32 +94,51 @@ class _HomeNewsTabState extends State<HomeNewsTab> {
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: () => setState(() => _newsExpanded = !_newsExpanded),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: AppStyle.cartoonDecoration(
-                    color: _newsExpanded ? AppStyle.primaryYellow : Colors.white,
-                    borderRadius: 6,
-                    shadowOffset: const Offset(2, 2),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _newsExpanded ? Icons.expand_less : Icons.expand_more,
-                        size: 18,
-                        color: Colors.black,
+              Row(
+                children: [
+                  // 🔄 Refresh button to force reload from API
+                  GestureDetector(
+                    onTap: () => setState(() {}),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: AppStyle.cartoonDecoration(
+                        color: Colors.white,
+                        borderRadius: 6,
+                        shadowOffset: const Offset(2, 2),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _newsExpanded ? 'Restrânge' : 'Extinde',
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
-                      ),
-                    ],
+                      child: const Icon(Icons.refresh, size: 18, color: Colors.black),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  // ⬆️⬇️ Expand/Collapse button
+                  GestureDetector(
+                    onTap: () => setState(() => _newsExpanded = !_newsExpanded),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: AppStyle.cartoonDecoration(
+                        color: _newsExpanded ? AppStyle.primaryYellow : Colors.white,
+                        borderRadius: 6,
+                        shadowOffset: const Offset(2, 2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _newsExpanded ? Icons.expand_less : Icons.expand_more,
+                            size: 18,
+                            color: Colors.black,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _newsExpanded ? 'Restrânge' : 'Extinde',
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -186,7 +177,7 @@ class _HomeNewsTabState extends State<HomeNewsTab> {
             )
           else
             FutureBuilder<List<Map<String, dynamic>>>(
-              future: _fetchNews(subscribedTopics),
+              future: _newsService.getNews(subscribedTopics),
               builder: (context, newsSnap) {
                 if (newsSnap.connectionState == ConnectionState.waiting) {
                   return const Padding(
@@ -414,7 +405,7 @@ class _HomeNewsTabState extends State<HomeNewsTab> {
 }
 
 /// ── Individual News Card widget ──
-/// Each card fetches its Markdown content from the S3 `file_url` using FutureBuilder.
+/// Afișează titlul și topicul din răspunsul API, apoi încarcă markdown din S3.
 class _NewsCard extends StatelessWidget {
   final Map<String, dynamic> newsItem;
   const _NewsCard({required this.newsItem});
@@ -422,6 +413,8 @@ class _NewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? fileUrl = newsItem['file_url'];
+    final String title = newsItem['title'] ?? 'Fără titlu';
+    final String topic = newsItem['topic'] ?? 'N/A';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -431,21 +424,57 @@ class _NewsCard extends StatelessWidget {
         borderRadius: 12,
         shadowOffset: const Offset(3, 3),
       ),
-      child: fileUrl == null || fileUrl.isEmpty
-          ? const Text(
-              'URL fișier lipsă.',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔴 TITLU DIN API
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // 🔵 TOPIC TAG
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppStyle.primaryYellow,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              topic.toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 10,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: Colors.black26),
+          const SizedBox(height: 8),
+
+          // 🟢 MARKDOWN DIN S3
+          if (fileUrl == null || fileUrl.isEmpty)
+            const Text(
+              'URL fișier lipsă din API răspuns.',
+              style: TextStyle(fontWeight: FontWeight.bold, color: AppStyle.accentRed),
             )
-          : FutureBuilder<String>(
+          else
+            FutureBuilder<String>(
               future: _loadMarkdown(fileUrl),
               builder: (context, mdSnap) {
                 if (mdSnap.connectionState == ConnectionState.waiting) {
                   return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: 12),
                     child: Center(
                       child: SizedBox(
-                        height: 24,
-                        width: 24,
+                        height: 20,
+                        width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: AppStyle.accentPurple,
@@ -456,19 +485,60 @@ class _NewsCard extends StatelessWidget {
                 }
 
                 if (mdSnap.hasError || !mdSnap.hasData) {
-                  return const Text(
-                    'Eroare la încărcarea știrii.',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: AppStyle.accentRed),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Eroare la încărcarea fișierului markdown din S3.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppStyle.accentRed,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'S3 URL: $fileUrl',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      if (mdSnap.hasError)
+                        Text(
+                          'Detalii: ${mdSnap.error}',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: AppStyle.accentRed,
+                          ),
+                        ),
+                    ],
                   );
                 }
 
                 return MarkdownBody(
                   data: mdSnap.data!,
                   styleSheet: MarkdownStyleSheet(
-                    h1: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Colors.black),
-                    h2: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Colors.black),
-                    h3: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.black),
-                    p: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87, height: 1.5),
+                    h1: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      color: Colors.black,
+                    ),
+                    h2: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 17,
+                      color: Colors.black,
+                    ),
+                    h3: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      color: Colors.black,
+                    ),
+                    p: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
                     listBullet: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     strong: const TextStyle(fontWeight: FontWeight.w900),
                     blockquoteDecoration: BoxDecoration(
@@ -480,11 +550,23 @@ class _NewsCard extends StatelessWidget {
                 );
               },
             ),
+        ],
+      ),
     );
   }
 
   /// Fetches raw Markdown text from an S3 public URL
   Future<String> _loadMarkdown(String url) async {
-    return await http.read(Uri.parse(url));
+    print(
+      '\n📄 [S3 MARKDOWN] Încarcă de la: $url\n',
+    );
+    try {
+      final content = await http.read(Uri.parse(url));
+      print('✅ [S3 MARKDOWN] Reușit - ${content.length} bytes\n');
+      return content;
+    } catch (e) {
+      print('❌ [S3 MARKDOWN] Eroare: $e\n');
+      rethrow;
+    }
   }
 }
