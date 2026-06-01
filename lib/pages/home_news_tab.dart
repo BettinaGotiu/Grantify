@@ -220,9 +220,13 @@ class _HomeNewsTabState extends State<HomeNewsTab> {
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  constraints: _newsExpanded
-                      ? const BoxConstraints()
-                      : const BoxConstraints(maxHeight: 350),
+                  // În loc de BoxConstraints goale, îi dăm limite clare pe înălțime
+                  constraints: BoxConstraints(
+                    minHeight: 0,
+                    maxHeight: _newsExpanded
+                        ? 2000.0
+                        : 350.0, // Schimbăm înălțimea maximă numeric
+                  ),
                   child: ListView.builder(
                     shrinkWrap: true,
                     physics: _newsExpanded
