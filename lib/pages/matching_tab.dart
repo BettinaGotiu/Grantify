@@ -70,11 +70,28 @@ class _MatchingTabState extends State<MatchingTab> {
     setState(() {
       _cuiVerifying = false;
       _cuiVerified = true;
-      // Mocked data retrieved from OpenAPI.ro
-      _companyName = 'DANTE INTERNATIONAL S.A.';
-      _userCaen = '6201'; // IT / Tehnologie
-      _userLocatie = 'Urban';
-      _userVechime = 2;
+      
+      if (cui == '14041710') {
+        _companyName = 'BITDEFENDER SRL';
+        _userCaen = '6201';
+        _userLocatie = 'Urban';
+        _userVechime = 20;
+      } else if (cui == '4471018') {
+        _companyName = 'SUBANSAMBLE AUTO SA';
+        _userCaen = '4120';
+        _userLocatie = 'Rural';
+        _userVechime = 5;
+      } else if (cui == '14118020') {
+        _companyName = 'REGINA MARIA / CENTRUL MEDICAL UNIREA SRL';
+        _userCaen = '8621';
+        _userLocatie = 'Urban';
+        _userVechime = 10;
+      } else {
+        _companyName = 'DANTE INTERNATIONAL S.A.';
+        _userCaen = '6201';
+        _userLocatie = 'Urban';
+        _userVechime = 2;
+      }
     });
   }
 
@@ -143,6 +160,7 @@ class _MatchingTabState extends State<MatchingTab> {
         'user_profile': {
           'caen': _userCaen,
           'locatie': _userLocatie,
+          'locantie': _userLocatie,
           'vechime': _userVechime,
         },
         'matched_grants': [

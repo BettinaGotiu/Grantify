@@ -212,9 +212,9 @@ class _HomeNewsTabState extends State<HomeNewsTab> {
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  constraints: BoxConstraints(
-                    maxHeight: _newsExpanded ? double.infinity : 350,
-                  ),
+                  constraints: _newsExpanded
+                      ? const BoxConstraints()
+                      : const BoxConstraints(maxHeight: 350),
                   child: ListView.builder(
                     shrinkWrap: true,
                     physics: _newsExpanded
@@ -313,14 +313,10 @@ class _HomeNewsTabState extends State<HomeNewsTab> {
 
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                constraints: BoxConstraints(
-                  maxHeight: _grantsExpanded ? double.infinity : 320,
-                ),
+                height: _grantsExpanded ? 500.0 : 250.0,
                 child: ListView.builder(
                   shrinkWrap: true,
-                  physics: _grantsExpanded
-                      ? const NeverScrollableScrollPhysics()
-                      : const ClampingScrollPhysics(),
+                  physics: const ClampingScrollPhysics(),
                   itemCount: grants.length,
                   itemBuilder: (context, index) {
                     final grant = grants[index];
@@ -489,10 +485,6 @@ class _NewsCard extends StatelessWidget {
 
   /// Fetches raw Markdown text from an S3 public URL
   Future<String> _loadMarkdown(String url) async {
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      return response.body;
-    }
-    throw Exception('Failed to load markdown (${response.statusCode})');
+    return await http.read(Uri.parse(url));
   }
 }

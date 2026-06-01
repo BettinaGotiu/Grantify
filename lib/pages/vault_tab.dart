@@ -247,14 +247,7 @@ class _VaultTabState extends State<VaultTab> {
                             const Icon(Icons.person_search, size: 18, color: Colors.black54),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                'Profil Salvat: CAEN $caen | Mediu $location | Vechime $vechime ani',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.black87,
-                                ),
-                              ),
+                              child: Text("Profil utilizat la potrivire: CAEN ${doc['user_profile']['caen']} | Locație: ${doc['user_profile']['locantie']} | Vechime: ${doc['user_profile']['vechime']} ani", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                             ),
                           ],
                         ),
